@@ -2,6 +2,10 @@
 
 A React state monitor for Zustand stores with automatic registration and debugging capabilities.
 
+## 🚀 [Live Demo](https://zustand-state-monitor.surge.sh/)
+
+Try out the interactive demo to see Zustand State Monitor in action!
+
 ## Features
 
 - 🔍 **Monitor Zustand State Changes**: Track all state changes with detailed history

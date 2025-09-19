@@ -1,6 +1,6 @@
 {
   "name": "zustand-state-monitor",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "A React state monitor for Zustand stores with automatic registration and debugging capabilities",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -53,5 +53,5 @@
   "bugs": {
     "url": "https://github.com/sahadev/zustand-state-monitor/issues"
   },
-  "homepage": "https://github.com/sahadev/zustand-state-monitor#readme"
+  "homepage": "https://zustand-state-monitor.surge.sh/"
 }
