@@ -1,0 +1,55 @@
+{
+  "name": "zustand-state-monitor",
+  "version": "1.0.4",
+  "description": "A React state monitor for Zustand stores with automatic registration and debugging capabilities",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.umd.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && node scripts/fix-imports.js && webpack",
+    "build:umd": "webpack",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "zustand",
+    "state",
+    "monitor",
+    "debug",
+    "react",
+    "devtools"
+  ],
+  "author": "sahadev",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "zustand": ">=4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "typescript": "^5.0.0",
+    "zustand": "^4.4.7",
+    "react": "^18.0.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0",
+    "ts-loader": "^9.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sahadev/zustand-state-monitor"
+  },
+  "bugs": {
+    "url": "https://github.com/sahadev/zustand-state-monitor/issues"
+  },
+  "homepage": "https://github.com/sahadev/zustand-state-monitor#readme"
+}
