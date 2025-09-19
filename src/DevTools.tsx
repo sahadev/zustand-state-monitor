@@ -24,7 +24,7 @@ export const StateMonitorDevTools: React.FC<StateMonitorDevToolsProps> = ({
   const [isVisible, setIsVisible] = useState(defaultVisible);
   const [selectedStore, setSelectedStore] = useState<string>('');
   const [stores, setStores] = useState<string[]>([]);
-  const { history, clearHistory } = useStateHistory(selectedStore || undefined);
+  const { history, clearHistory } = useStateHistory(selectedStore);
 
   useEffect(() => {
     const updateStores = () => {
@@ -37,11 +37,6 @@ export const StateMonitorDevTools: React.FC<StateMonitorDevToolsProps> = ({
     return () => clearInterval(interval);
   }, [monitor]);
 
-  useEffect(() => {
-    if (stores.length > 0 && !selectedStore) {
-      setSelectedStore(stores[0]);
-    }
-  }, [stores, selectedStore]);
 
   if (!isVisible) {
     return (

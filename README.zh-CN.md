@@ -358,7 +358,7 @@ MIT
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-repo/zustand-state-monitor.git
+git clone https://github.com/sahadev/zustand-state-monitor.git
 
 # 安装依赖
 npm install

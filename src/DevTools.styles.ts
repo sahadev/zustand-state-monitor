@@ -249,15 +249,18 @@ export const stateChangeItemStyles = {
     marginTop: '12px',
     fontSize: '11px',
     animation: 'fadeIn 0.2s ease-in',
+    textAlign: 'left' as const,
   },
 
   changesSection: {
     marginBottom: '8px',
+    textAlign: 'left' as const,
   },
 
   changesLabel: {
     color: '#374151',
     fontSize: '12px',
+    textAlign: 'left' as const,
   },
 
   codeBlock: {
@@ -273,10 +276,12 @@ export const stateChangeItemStyles = {
     lineHeight: '1.4',
     cursor: 'text',
     userSelect: 'text' as const,
+    textAlign: 'left' as const,
   },
 
   details: {
     marginTop: '8px',
+    textAlign: 'left' as const,
   },
 
   summary: {
@@ -287,6 +292,7 @@ export const stateChangeItemStyles = {
     padding: '4px 0',
     borderRadius: '4px',
     transition: 'color 0.2s ease',
+    textAlign: 'left' as const,
   },
 
   fullStateCodeBlock: {
@@ -303,6 +309,7 @@ export const stateChangeItemStyles = {
     lineHeight: '1.4',
     cursor: 'text',
     userSelect: 'text' as const,
+    textAlign: 'left' as const,
   },
 };
 

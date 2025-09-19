@@ -19,6 +19,8 @@
     "build": "tsc && node scripts/fix-imports.js && webpack",
     "build:umd": "webpack",
     "dev": "tsc --watch",
+    "dev:playground": "cd dev && npm run dev",
+    "setup:dev": "cd dev && npm install",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
