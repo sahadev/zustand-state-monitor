@@ -99,7 +99,7 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <pre style={stateChangeItemStyles.fullStateCodeBlock}>
-                    <StateTree data={state} defaultExpanded={true} />
+                    <StateTree data={state} defaultExpanded={false} />
                   </pre>
                 </div>
               )}
