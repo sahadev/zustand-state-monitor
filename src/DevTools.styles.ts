@@ -2,9 +2,6 @@ import React from 'react';
 
 export const devToolsStyles = {
   floatingButton: {
-    position: 'fixed' as const,
-    bottom: '24px',
-    right: '24px',
     padding: '12px 16px',
     backgroundColor: '#4f46e5',
     color: 'white',
@@ -20,9 +17,6 @@ export const devToolsStyles = {
   },
 
   container: {
-    position: 'fixed' as const,
-    bottom: '24px',
-    right: '24px',
     width: '420px',
     backgroundColor: '#ffffff',
     border: '1px solid rgba(148, 163, 184, 0.2)',
@@ -66,6 +60,37 @@ export const devToolsStyles = {
 
   content: {
     padding: '20px',
+  },
+
+  tabContainer: {
+    marginBottom: '16px',
+  },
+
+  tabList: {
+    display: 'flex',
+    gap: '8px',
+    borderBottom: '2px solid #e5e7eb',
+    marginBottom: '16px',
+  },
+
+  tabButton: {
+    padding: '10px 16px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#9ca3af',
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    marginBottom: '-2px',
+  },
+
+  tabButtonActive: {
+    color: '#4f46e5',
+  },
+
+  tabContent: {
+    minHeight: '200px',
   },
 
   storeSection: {
