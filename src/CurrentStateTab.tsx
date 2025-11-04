@@ -1,15 +1,21 @@
-import React from 'react';
-import { devToolsStyles, stateChangeItemStyles } from './DevTools.styles';
-import { StateMonitorAPI } from './types';
+import React from "react";
+import { devToolsStyles, stateChangeItemStyles } from "./DevTools.styles";
+import { StateMonitorAPI } from "./types";
+import { StateTree } from "./StateTree";
 
 interface CurrentStateTabProps {
   monitor: StateMonitorAPI;
   selectedStore: string;
 }
 
-export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({ monitor, selectedStore }) => {
+export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({
+  monitor,
+  selectedStore,
+}) => {
   const [states, setStates] = React.useState<Record<string, any>>({});
-  const [expandedStores, setExpandedStores] = React.useState<Set<string>>(new Set());
+  const [expandedStores, setExpandedStores] = React.useState<Set<string>>(
+    new Set()
+  );
 
   React.useEffect(() => {
     const updateStates = () => {
@@ -46,7 +52,9 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({ monitor, selec
       {storeNames.length === 0 ? (
         <div style={devToolsStyles.emptyState}>
           <div style={devToolsStyles.emptyStateIcon}>📦</div>
-          {selectedStore ? `No state found for store: ${selectedStore}` : 'No stores registered'}
+          {selectedStore
+            ? `No state found for store: ${selectedStore}`
+            : "No stores registered"}
         </div>
       ) : (
         storeNames.map((storeName) => {
@@ -58,7 +66,9 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({ monitor, selec
               key={storeName}
               style={{
                 ...stateChangeItemStyles.container,
-                backgroundColor: isExpanded ? stateChangeItemStyles.expandedContainer.backgroundColor : 'transparent',
+                backgroundColor: isExpanded
+                  ? stateChangeItemStyles.expandedContainer.backgroundColor
+                  : "transparent",
               }}
               onClick={() => toggleExpand(storeName)}
             >
@@ -67,12 +77,16 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({ monitor, selec
                   <span
                     style={{
                       ...stateChangeItemStyles.expandIcon,
-                      color: isExpanded ? stateChangeItemStyles.expandIconExpanded.color : stateChangeItemStyles.expandIconCollapsed.color,
+                      color: isExpanded
+                        ? stateChangeItemStyles.expandIconExpanded.color
+                        : stateChangeItemStyles.expandIconCollapsed.color,
                     }}
                   >
-                    {isExpanded ? '▼' : '▶'}
+                    {isExpanded ? "▼" : "▶"}
                   </span>
-                  <span style={stateChangeItemStyles.storeName}>{storeName}</span>
+                  <span style={stateChangeItemStyles.storeName}>
+                    {storeName}
+                  </span>
                 </div>
                 <span style={stateChangeItemStyles.timestamp}>
                   Current State
@@ -85,7 +99,7 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({ monitor, selec
                   onClick={(e) => e.stopPropagation()}
                 >
                   <pre style={stateChangeItemStyles.fullStateCodeBlock}>
-                    {JSON.stringify(state, null, 2)}
+                    <StateTree data={state} defaultExpanded={true} />
                   </pre>
                 </div>
               )}
@@ -96,4 +110,3 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({ monitor, selec
     </div>
   );
 };
-

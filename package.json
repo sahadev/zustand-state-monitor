@@ -1,6 +1,6 @@
 {
   "name": "zustand-state-monitor",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A React state monitor for Zustand stores with automatic registration and debugging capabilities",
   "main": "dist/index.js",
   "module": "dist/index.js",
