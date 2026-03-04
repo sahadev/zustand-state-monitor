@@ -101,6 +101,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set) => ({
   theme: 'light',
   notifications: true,
+  text: "This is a long text that should be wrapped to the next line, 一只色彩斑斓的飞鸟在黄金时刻的天空中优雅翱翔，虹彩般的羽毛闪耀着翡翠绿、宝石蓝、宝石红和琥珀金的光泽，在温暖的阳光下轻盈地掠过郁郁葱葱的热带雨林树冠。它舒展着修长而优美的双翅，每一根羽毛的尖端都泛着微微的荧光。下方，薄雾从树梢轻轻升起，远处的瀑布倾泻入一汪清澈见底的水潭。画面如电影般壮美，如梦境般迷人——一场大自然运动之美的盛宴。",
   autoSave: false,
   language: 'en',
   setTheme: (theme) => set({ theme }),

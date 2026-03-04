@@ -59,6 +59,7 @@ export const StateMonitorDevTools: React.FC<StateMonitorDevToolsProps> = ({
     edge: string;
   } | null>(null);
 
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [matchCount, setMatchCount] = useState(0);
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
@@ -116,17 +117,21 @@ export const StateMonitorDevTools: React.FC<StateMonitorDevToolsProps> = ({
     document.addEventListener('mouseup', handleUp);
   }, [size]);
 
-  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (matchCount === 0) return;
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (e.shiftKey) {
-        setActiveMatchIndex((i) => (i - 1 + matchCount) % matchCount);
-      } else {
-        setActiveMatchIndex((i) => (i + 1) % matchCount);
+      const currentInput = e.currentTarget.value;
+      if (currentInput !== searchQuery) {
+        setSearchQuery(currentInput);
+      } else if (matchCount > 0) {
+        if (e.shiftKey) {
+          setActiveMatchIndex((i) => (i - 1 + matchCount) % matchCount);
+        } else {
+          setActiveMatchIndex((i) => (i + 1) % matchCount);
+        }
       }
     }
-  }, [matchCount]);
+  }, [matchCount, searchQuery]);
 
   const handlePrev = useCallback(() => {
     if (matchCount === 0) return;
@@ -141,6 +146,12 @@ export const StateMonitorDevTools: React.FC<StateMonitorDevToolsProps> = ({
   useEffect(() => {
     setActiveMatchIndex(0);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (!searchInput) {
+      setSearchQuery('');
+    }
+  }, [searchInput]);
 
   const handleMatchCountChange = useCallback((count: number) => {
     setMatchCount(count);
@@ -202,9 +213,9 @@ export const StateMonitorDevTools: React.FC<StateMonitorDevToolsProps> = ({
       <div style={devToolsStyles.searchContainer}>
         <input
           type="text"
-          placeholder="搜索属性或值..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="搜索属性或值 (Enter 搜索)"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={handleSearchKeyDown}
           onFocus={(e) => {
             e.currentTarget.style.borderColor = '#4f46e5';
@@ -216,7 +227,7 @@ export const StateMonitorDevTools: React.FC<StateMonitorDevToolsProps> = ({
           }}
           style={devToolsStyles.searchInput}
         />
-        {searchQuery && (
+        {searchInput && (
           <div style={devToolsStyles.searchNav}>
             <span style={devToolsStyles.searchCount}>
               {matchCount > 0 ? `${activeMatchIndex + 1}/${matchCount}` : '0'}

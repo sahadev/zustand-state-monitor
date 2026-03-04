@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { devToolsStyles } from './DevTools.styles';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { devToolsStyles } from "./DevTools.styles";
 
 export interface MatchInfo {
   path: string;
-  type: 'key' | 'value';
+  type: "key" | "value";
 }
 
-function collectMatches(data: any, query: string, parentPath: string): MatchInfo[] {
+function collectMatches(
+  data: any,
+  query: string,
+  parentPath: string
+): MatchInfo[] {
   if (!query) return [];
   const lowerQ = query.toLowerCase();
   const results: MatchInfo[] = [];
@@ -16,30 +20,36 @@ function collectMatches(data: any, query: string, parentPath: string): MatchInfo
       const childPath = `${parentPath}[${index}]`;
       const indexLabel = `[${index}]`;
       if (indexLabel.toLowerCase().includes(lowerQ)) {
-        results.push({ path: childPath, type: 'key' });
+        results.push({ path: childPath, type: "key" });
       }
-      if (typeof item === 'object' && item !== null) {
+      if (typeof item === "object" && item !== null) {
         results.push(...collectMatches(item, query, childPath));
       } else {
-        const valStr = item === null ? 'null' : item === undefined ? 'undefined' : String(item);
+        const valStr =
+          item === null
+            ? "null"
+            : item === undefined
+            ? "undefined"
+            : String(item);
         if (valStr.toLowerCase().includes(lowerQ)) {
-          results.push({ path: childPath, type: 'value' });
+          results.push({ path: childPath, type: "value" });
         }
       }
     });
-  } else if (typeof data === 'object' && data !== null) {
+  } else if (typeof data === "object" && data !== null) {
     Object.keys(data).forEach((key) => {
       const childPath = parentPath ? `${parentPath}.${key}` : key;
       if (key.toLowerCase().includes(lowerQ)) {
-        results.push({ path: childPath, type: 'key' });
+        results.push({ path: childPath, type: "key" });
       }
       const val = data[key];
-      if (typeof val === 'object' && val !== null) {
+      if (typeof val === "object" && val !== null) {
         results.push(...collectMatches(val, query, childPath));
       } else {
-        const valStr = val === null ? 'null' : val === undefined ? 'undefined' : String(val);
+        const valStr =
+          val === null ? "null" : val === undefined ? "undefined" : String(val);
         if (valStr.toLowerCase().includes(lowerQ)) {
-          results.push({ path: childPath, type: 'value' });
+          results.push({ path: childPath, type: "value" });
         }
       }
     });
@@ -51,8 +61,9 @@ function collectMatches(data: any, query: string, parentPath: string): MatchInfo
 export function collectAllMatches(data: any, query: string): MatchInfo[] {
   if (!query || !data) return [];
   const isArray = Array.isArray(data);
-  if (isArray) return collectMatches(data, query, 'root');
-  if (typeof data === 'object' && data !== null) return collectMatches(data, query, '');
+  if (isArray) return collectMatches(data, query, "root");
+  if (typeof data === "object" && data !== null)
+    return collectMatches(data, query, "");
   return [];
 }
 
@@ -60,8 +71,8 @@ export function getAncestorPaths(path: string): string[] {
   const ancestors: string[] = [];
   let current = path;
   while (true) {
-    const dotIdx = current.lastIndexOf('.');
-    const bracketIdx = current.lastIndexOf('[');
+    const dotIdx = current.lastIndexOf(".");
+    const bracketIdx = current.lastIndexOf("[");
     const cutIdx = Math.max(dotIdx, bracketIdx);
     if (cutIdx <= 0) break;
     current = current.substring(0, cutIdx);
@@ -70,7 +81,11 @@ export function getAncestorPaths(path: string): string[] {
   return ancestors;
 }
 
-function highlightText(text: string, query: string, isActive: boolean): React.ReactNode {
+function highlightText(
+  text: string,
+  query: string,
+  isActive: boolean
+): React.ReactNode {
   if (!query) return text;
   const lowerText = text.toLowerCase();
   const lowerQ = query.toLowerCase();
@@ -86,7 +101,11 @@ function highlightText(text: string, query: string, isActive: boolean): React.Re
     parts.push(
       <span
         key={pos}
-        style={isActive ? devToolsStyles.searchHighlightActive : devToolsStyles.searchHighlight}
+        style={
+          isActive
+            ? devToolsStyles.searchHighlightActive
+            : devToolsStyles.searchHighlight
+        }
       >
         {text.substring(pos, pos + query.length)}
       </span>
@@ -110,48 +129,89 @@ interface TreeNodeProps {
   matchPaths: Set<string>;
 }
 
+function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard) {
+    return navigator.clipboard.writeText(text);
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  return Promise.resolve();
+}
+
 const TreeNode: React.FC<TreeNodeProps> = ({
-  label, value, path, level, expandedPaths, onToggle,
-  searchQuery, activeMatch, matchPaths,
+  label,
+  value,
+  path,
+  level,
+  expandedPaths,
+  onToggle,
+  searchQuery,
+  activeMatch,
+  matchPaths,
 }) => {
   const nodeRef = useRef<HTMLDivElement>(null);
+  const [copiedField, setCopiedField] = useState<'key' | 'value' | null>(null);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isExpanded = expandedPaths.has(path);
-  const hasChildren = (typeof value === 'object' && value !== null);
-  const isObject = typeof value === 'object' && value !== null && !Array.isArray(value);
+  const hasChildren = typeof value === "object" && value !== null;
+  const isObject =
+    typeof value === "object" && value !== null && !Array.isArray(value);
   const isArray = Array.isArray(value);
+
+  const handleCopy = useCallback((text: string, field: 'key' | 'value') => {
+    copyToClipboard(text);
+    setCopiedField(field);
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopiedField(null), 1200);
+  }, []);
 
   const isActiveNode = activeMatch?.path === path;
 
   useEffect(() => {
     if (isActiveNode && nodeRef.current) {
-      nodeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      nodeRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [isActiveNode]);
 
   const getValueDisplay = () => {
-    if (value === null) return 'null';
-    if (value === undefined) return 'undefined';
-    if (typeof value === 'string') return `"${value}"`;
-    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-    return '';
+    if (value === null) return "null";
+    if (value === undefined) return "undefined";
+    if (typeof value === "string") return `"${value}"`;
+    if (typeof value === "number" || typeof value === "boolean")
+      return String(value);
+    return "";
   };
 
   const getTypeLabel = () => {
     if (isArray) return `[${value.length}]`;
     if (isObject) return `{${Object.keys(value).length}}`;
-    return '';
+    return "";
   };
 
   const renderLabel = () => {
     const isKeyMatch = matchPaths.has(path) && searchQuery;
-    return highlightText(label, isKeyMatch ? searchQuery : '', isActiveNode && activeMatch?.type === 'key');
+    return highlightText(
+      label,
+      isKeyMatch ? searchQuery : "",
+      isActiveNode && activeMatch?.type === "key"
+    );
   };
 
   const renderValue = () => {
     const valStr = getValueDisplay();
     if (!searchQuery) return valStr;
     const isValMatch = matchPaths.has(path);
-    return highlightText(valStr, isValMatch ? searchQuery : '', isActiveNode && activeMatch?.type === 'value');
+    return highlightText(
+      valStr,
+      isValMatch ? searchQuery : "",
+      isActiveNode && activeMatch?.type === "value"
+    );
   };
 
   const renderChildren = () => {
@@ -205,22 +265,27 @@ const TreeNode: React.FC<TreeNodeProps> = ({
       <div
         ref={nodeRef}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '2px 4px',
-          cursor: hasChildren ? 'pointer' : 'default',
-          borderRadius: '4px',
-          transition: 'background-color 0.15s',
-          fontSize: '13px',
-          lineHeight: '1.5',
-          backgroundColor: isActiveNode ? 'rgba(79, 70, 229, 0.08)' : undefined,
-          outline: isActiveNode ? '1.5px solid rgba(79, 70, 229, 0.3)' : undefined,
+          display: "flex",
+          alignItems: "center",
+          padding: "2px 4px",
+          cursor: hasChildren ? "pointer" : "default",
+          borderRadius: "4px",
+          transition: "background-color 0.15s",
+          fontSize: "13px",
+          lineHeight: "1.5",
+          backgroundColor: isActiveNode ? "rgba(79, 70, 229, 0.08)" : undefined,
+          outline: isActiveNode
+            ? "1.5px solid rgba(79, 70, 229, 0.3)"
+            : undefined,
         }}
         onMouseEnter={(e) => {
-          if (!isActiveNode) e.currentTarget.style.backgroundColor = '#f9fafb';
+          if (!isActiveNode) e.currentTarget.style.backgroundColor = "#f9fafb";
         }}
         onMouseLeave={(e) => {
-          if (!isActiveNode) e.currentTarget.style.backgroundColor = isActiveNode ? 'rgba(79, 70, 229, 0.08)' : 'transparent';
+          if (!isActiveNode)
+            e.currentTarget.style.backgroundColor = isActiveNode
+              ? "rgba(79, 70, 229, 0.08)"
+              : "transparent";
         }}
         onClick={() => {
           if (hasChildren) onToggle(path);
@@ -228,31 +293,87 @@ const TreeNode: React.FC<TreeNodeProps> = ({
       >
         <span
           style={{
-            width: '16px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '10px',
-            color: '#6b7280',
-            marginRight: '6px',
-            transition: 'transform 0.2s',
-            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            width: "16px",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "10px",
+            color: "#6b7280",
+            marginRight: "6px",
+            transition: "transform 0.2s",
+            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
             opacity: hasChildren ? 1 : 0,
+            flexShrink: 0,
           }}
         >
           ▶
         </span>
-        <span style={{ fontWeight: hasChildren ? '600' : '400', color: '#374151', marginRight: '6px' }}>
+        <span
+          style={{
+            fontWeight: hasChildren ? "600" : "400",
+            color: "#374151",
+            marginRight: "6px",
+            flexShrink: 0,
+            cursor: "pointer",
+            position: "relative" as const,
+            borderRadius: "3px",
+            transition: "background-color 0.15s",
+          }}
+          title="点击复制属性名"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCopy(label, 'key');
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(79, 70, 229, 0.08)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+        >
           {renderLabel()}:
+          {copiedField === 'key' && (
+            <span style={{
+              position: 'absolute', top: '-20px', left: '50%', transform: 'translateX(-50%)',
+              fontSize: '10px', color: '#fff', backgroundColor: '#10b981',
+              padding: '1px 6px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none',
+              zIndex: 100,
+            }}>已复制</span>
+          )}
         </span>
         {hasChildren && (
-          <span style={{ color: '#9ca3af', fontSize: '12px', marginRight: '6px' }}>
+          <span
+            style={{ color: "#9ca3af", fontSize: "12px", marginRight: "6px" }}
+          >
             {getTypeLabel()}
           </span>
         )}
         {!hasChildren && (
-          <span style={{ color: '#6b7280', fontSize: '12px' }}>
+          <span
+            style={{
+              color: "#6b7280",
+              fontSize: "12px",
+              wordBreak: "break-all",
+              cursor: "pointer",
+              position: "relative" as const,
+              borderRadius: "3px",
+              transition: "background-color 0.15s",
+            }}
+            title="点击复制值"
+            onClick={(e) => {
+              e.stopPropagation();
+              const raw = value === null ? 'null' : value === undefined ? 'undefined'
+                : typeof value === 'string' ? value : String(value);
+              handleCopy(raw, 'value');
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(79, 70, 229, 0.08)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >
             {renderValue()}
+            {copiedField === 'value' && (
+              <span style={{
+                position: 'absolute', top: '-20px', left: '50%', transform: 'translateX(-50%)',
+                fontSize: '10px', color: '#fff', backgroundColor: '#10b981',
+                padding: '1px 6px', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none',
+                zIndex: 100,
+              }}>已复制</span>
+            )}
           </span>
         )}
       </div>
@@ -277,7 +398,7 @@ interface StateTreeProps {
 export const StateTree: React.FC<StateTreeProps> = ({
   data,
   defaultExpanded = true,
-  searchQuery = '',
+  searchQuery = "",
   externalMatches,
   externalActiveMatch,
   activeMatchIndex = 0,
@@ -290,22 +411,22 @@ export const StateTree: React.FC<StateTreeProps> = ({
   const useExternal = externalMatches !== undefined;
   const matches = useExternal ? externalMatches : internalMatches;
   const activeMatch = useExternal
-    ? (externalActiveMatch ?? null)
-    : (internalMatches[activeMatchIndex] ?? null);
+    ? externalActiveMatch ?? null
+    : internalMatches[activeMatchIndex] ?? null;
 
   useEffect(() => {
     if (defaultExpanded && data) {
       const paths = new Set<string>();
-      if (typeof data === 'object' && data !== null) {
+      if (typeof data === "object" && data !== null) {
         if (Array.isArray(data)) {
           data.forEach((item, index) => {
-            if (typeof item === 'object' && item !== null) {
+            if (typeof item === "object" && item !== null) {
               paths.add(`root[${index}]`);
             }
           });
         } else {
           Object.keys(data).forEach((key) => {
-            if (typeof data[key] === 'object' && data[key] !== null) {
+            if (typeof data[key] === "object" && data[key] !== null) {
               paths.add(key);
             }
           });
@@ -318,16 +439,6 @@ export const StateTree: React.FC<StateTreeProps> = ({
   useEffect(() => {
     if (useExternal) {
       matchPathsRef.current = new Set(matches.map((m) => m.path));
-
-      if (matches.length > 0) {
-        setExpandedPaths((prev) => {
-          const next = new Set(prev);
-          matches.forEach((m) => {
-            getAncestorPaths(m.path).forEach((a) => next.add(a));
-          });
-          return next;
-        });
-      }
       return;
     }
 
@@ -342,16 +453,6 @@ export const StateTree: React.FC<StateTreeProps> = ({
     setInternalMatches(allMatches);
     matchPathsRef.current = new Set(allMatches.map((m) => m.path));
     onMatchCountChange?.(allMatches.length);
-
-    if (allMatches.length > 0) {
-      setExpandedPaths((prev) => {
-        const next = new Set(prev);
-        allMatches.forEach((m) => {
-          getAncestorPaths(m.path).forEach((a) => next.add(a));
-        });
-        return next;
-      });
-    }
   }, [searchQuery, data, useExternal, matches, onMatchCountChange]);
 
   useEffect(() => {
@@ -382,56 +483,62 @@ export const StateTree: React.FC<StateTreeProps> = ({
 
   if (data === null || data === undefined) {
     return (
-      <div style={{ padding: '8px', color: '#9ca3af', fontSize: '13px' }}>
+      <div style={{ padding: "8px", color: "#9ca3af", fontSize: "13px" }}>
         {String(data)}
       </div>
     );
   }
 
-  const isObject = typeof data === 'object' && data !== null && !Array.isArray(data);
+  const isObject =
+    typeof data === "object" && data !== null && !Array.isArray(data);
   const isArray = Array.isArray(data);
 
   if (isObject || isArray) {
     return (
-      <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-        {isArray ? (
-          data.map((item: any, index: number) => (
-            <TreeNode
-              key={`root[${index}]`}
-              label={`[${index}]`}
-              value={item}
-              path={`root[${index}]`}
-              level={0}
-              expandedPaths={expandedPaths}
-              onToggle={handleToggle}
-              searchQuery={searchQuery}
-              activeMatch={activeMatch}
-              matchPaths={matchPathsRef.current}
-            />
-          ))
-        ) : (
-          Object.keys(data).map((key) => (
-            <TreeNode
-              key={key}
-              label={key}
-              value={data[key]}
-              path={key}
-              level={0}
-              expandedPaths={expandedPaths}
-              onToggle={handleToggle}
-              searchQuery={searchQuery}
-              activeMatch={activeMatch}
-              matchPaths={matchPathsRef.current}
-            />
-          ))
-        )}
+      <div style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+        {isArray
+          ? data.map((item: any, index: number) => (
+              <TreeNode
+                key={`root[${index}]`}
+                label={`[${index}]`}
+                value={item}
+                path={`root[${index}]`}
+                level={0}
+                expandedPaths={expandedPaths}
+                onToggle={handleToggle}
+                searchQuery={searchQuery}
+                activeMatch={activeMatch}
+                matchPaths={matchPathsRef.current}
+              />
+            ))
+          : Object.keys(data).map((key) => (
+              <TreeNode
+                key={key}
+                label={key}
+                value={data[key]}
+                path={key}
+                level={0}
+                expandedPaths={expandedPaths}
+                onToggle={handleToggle}
+                searchQuery={searchQuery}
+                activeMatch={activeMatch}
+                matchPaths={matchPathsRef.current}
+              />
+            ))}
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', padding: '8px', color: '#6b7280', fontSize: '13px' }}>
-      {typeof data === 'string' ? `"${data}"` : String(data)}
+    <div
+      style={{
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        padding: "8px",
+        color: "#6b7280",
+        fontSize: "13px",
+      }}
+    >
+      {typeof data === "string" ? `"${data}"` : String(data)}
     </div>
   );
 };

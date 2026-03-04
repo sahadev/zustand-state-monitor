@@ -63,10 +63,12 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({
     allMatchesRef.current = results;
     onMatchCountChange?.(results.length);
 
-    if (storesToExpand.size > 0) {
+    if (results.length > 0) {
+      const first = results[0];
       setExpandedStores((prev) => {
+        if (prev.has(first.storeName)) return prev;
         const next = new Set(prev);
-        storesToExpand.forEach((s) => next.add(s));
+        next.add(first.storeName);
         return next;
       });
     }
