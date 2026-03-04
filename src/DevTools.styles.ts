@@ -17,7 +17,6 @@ export const devToolsStyles = {
   },
 
   container: {
-    width: '420px',
     backgroundColor: '#ffffff',
     border: '1px solid rgba(148, 163, 184, 0.2)',
     borderRadius: '16px',
@@ -27,6 +26,10 @@ export const devToolsStyles = {
     fontSize: '13px',
     backdropFilter: 'blur(20px)',
     background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+    position: 'relative' as const,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    overflow: 'hidden',
   },
 
   header: {
@@ -60,6 +63,9 @@ export const devToolsStyles = {
 
   content: {
     padding: '20px',
+    flex: 1,
+    overflow: 'auto',
+    minHeight: 0,
   },
 
   tabContainer: {
@@ -218,6 +224,119 @@ export const devToolsStyles = {
 
   logButton: {
     backgroundColor: '#4f46e5',
+  },
+
+  resizeHandle: {
+    position: 'absolute' as const,
+    bottom: 0,
+    right: 0,
+    width: '20px',
+    height: '20px',
+    cursor: 'nwse-resize',
+    zIndex: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  resizeHandleIcon: {
+    width: '12px',
+    height: '12px',
+    borderRight: '2px solid #cbd5e1',
+    borderBottom: '2px solid #cbd5e1',
+    borderRadius: '0 0 3px 0',
+    transition: 'border-color 0.2s',
+  },
+
+  resizeHandleLeft: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: '4px',
+    height: '100%',
+    cursor: 'ew-resize',
+    zIndex: 10,
+  },
+
+  resizeHandleTop: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '4px',
+    cursor: 'ns-resize',
+    zIndex: 10,
+  },
+
+  resizeHandleTopLeft: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: '12px',
+    height: '12px',
+    cursor: 'nw-resize',
+    zIndex: 11,
+  },
+
+  searchContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 20px',
+    borderBottom: '1px solid #f1f5f9',
+    backgroundColor: '#fafbfc',
+  },
+
+  searchInput: {
+    flex: 1,
+    padding: '6px 10px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '8px',
+    fontSize: '12px',
+    outline: 'none',
+    backgroundColor: '#fff',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    minWidth: 0,
+  },
+
+  searchNav: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2px',
+    flexShrink: 0,
+  },
+
+  searchNavButton: {
+    padding: '3px 6px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    fontSize: '14px',
+    color: '#6b7280',
+    borderRadius: '4px',
+    transition: 'all 0.15s',
+    lineHeight: 1,
+  },
+
+  searchCount: {
+    fontSize: '11px',
+    color: '#9ca3af',
+    whiteSpace: 'nowrap' as const,
+    minWidth: '40px',
+    textAlign: 'center' as const,
+  },
+
+  searchHighlight: {
+    backgroundColor: '#fef08a',
+    borderRadius: '2px',
+    padding: '0 1px',
+  },
+
+  searchHighlightActive: {
+    backgroundColor: '#fb923c',
+    color: '#fff',
+    borderRadius: '2px',
+    padding: '0 1px',
   },
 };
 

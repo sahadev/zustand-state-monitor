@@ -1,21 +1,29 @@
 import React from "react";
 import { devToolsStyles, stateChangeItemStyles } from "./DevTools.styles";
 import { StateMonitorAPI } from "./types";
-import { StateTree } from "./StateTree";
+import { StateTree, collectAllMatches, MatchInfo, getAncestorPaths } from "./StateTree";
 
 interface CurrentStateTabProps {
   monitor: StateMonitorAPI;
   selectedStore: string;
+  searchQuery?: string;
+  activeMatchIndex?: number;
+  onMatchCountChange?: (count: number) => void;
 }
 
 export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({
   monitor,
   selectedStore,
+  searchQuery = '',
+  activeMatchIndex = 0,
+  onMatchCountChange,
 }) => {
   const [states, setStates] = React.useState<Record<string, any>>({});
   const [expandedStores, setExpandedStores] = React.useState<Set<string>>(
     new Set()
   );
+
+  const allMatchesRef = React.useRef<{ storeName: string; match: MatchInfo }[]>([]);
 
   React.useEffect(() => {
     const updateStates = () => {
@@ -33,6 +41,50 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({
     return () => clearInterval(interval);
   }, [monitor, selectedStore]);
 
+  React.useEffect(() => {
+    if (!searchQuery) {
+      allMatchesRef.current = [];
+      onMatchCountChange?.(0);
+      return;
+    }
+
+    const results: { storeName: string; match: MatchInfo }[] = [];
+    const storeNames = Object.keys(states);
+    const storesToExpand = new Set<string>();
+
+    storeNames.forEach((storeName) => {
+      const storeMatches = collectAllMatches(states[storeName], searchQuery);
+      if (storeMatches.length > 0) {
+        storesToExpand.add(storeName);
+        storeMatches.forEach((m) => results.push({ storeName, match: m }));
+      }
+    });
+
+    allMatchesRef.current = results;
+    onMatchCountChange?.(results.length);
+
+    if (storesToExpand.size > 0) {
+      setExpandedStores((prev) => {
+        const next = new Set(prev);
+        storesToExpand.forEach((s) => next.add(s));
+        return next;
+      });
+    }
+  }, [searchQuery, states, onMatchCountChange]);
+
+  React.useEffect(() => {
+    if (allMatchesRef.current.length === 0) return;
+    const active = allMatchesRef.current[activeMatchIndex];
+    if (!active) return;
+
+    setExpandedStores((prev) => {
+      if (prev.has(active.storeName)) return prev;
+      const next = new Set(prev);
+      next.add(active.storeName);
+      return next;
+    });
+  }, [activeMatchIndex]);
+
   const toggleExpand = (storeName: string) => {
     setExpandedStores((prev) => {
       const next = new Set(prev);
@@ -47,6 +99,21 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({
 
   const storeNames = Object.keys(states);
 
+  const activeGlobal = allMatchesRef.current[activeMatchIndex] ?? null;
+
+  const getStoreMatchInfo = (storeName: string) => {
+    const storeMatches = allMatchesRef.current
+      .filter((m) => m.storeName === storeName)
+      .map((m) => m.match);
+
+    let storeActiveMatch: MatchInfo | null = null;
+    if (activeGlobal && activeGlobal.storeName === storeName) {
+      storeActiveMatch = activeGlobal.match;
+    }
+
+    return { storeMatches, storeActiveMatch };
+  };
+
   return (
     <div style={devToolsStyles.historyContainer}>
       {storeNames.length === 0 ? (
@@ -60,6 +127,7 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({
         storeNames.map((storeName) => {
           const isExpanded = expandedStores.has(storeName);
           const state = states[storeName];
+          const { storeMatches, storeActiveMatch } = getStoreMatchInfo(storeName);
 
           return (
             <div
@@ -99,7 +167,13 @@ export const CurrentStateTab: React.FC<CurrentStateTabProps> = ({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <pre style={stateChangeItemStyles.fullStateCodeBlock}>
-                    <StateTree data={state} defaultExpanded={false} />
+                    <StateTree
+                      data={state}
+                      defaultExpanded={false}
+                      searchQuery={searchQuery}
+                      externalMatches={storeMatches}
+                      externalActiveMatch={storeActiveMatch}
+                    />
                   </pre>
                 </div>
               )}

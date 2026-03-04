@@ -1,4 +1,102 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { devToolsStyles } from './DevTools.styles';
+
+export interface MatchInfo {
+  path: string;
+  type: 'key' | 'value';
+}
+
+function collectMatches(data: any, query: string, parentPath: string): MatchInfo[] {
+  if (!query) return [];
+  const lowerQ = query.toLowerCase();
+  const results: MatchInfo[] = [];
+
+  if (Array.isArray(data)) {
+    data.forEach((item, index) => {
+      const childPath = `${parentPath}[${index}]`;
+      const indexLabel = `[${index}]`;
+      if (indexLabel.toLowerCase().includes(lowerQ)) {
+        results.push({ path: childPath, type: 'key' });
+      }
+      if (typeof item === 'object' && item !== null) {
+        results.push(...collectMatches(item, query, childPath));
+      } else {
+        const valStr = item === null ? 'null' : item === undefined ? 'undefined' : String(item);
+        if (valStr.toLowerCase().includes(lowerQ)) {
+          results.push({ path: childPath, type: 'value' });
+        }
+      }
+    });
+  } else if (typeof data === 'object' && data !== null) {
+    Object.keys(data).forEach((key) => {
+      const childPath = parentPath ? `${parentPath}.${key}` : key;
+      if (key.toLowerCase().includes(lowerQ)) {
+        results.push({ path: childPath, type: 'key' });
+      }
+      const val = data[key];
+      if (typeof val === 'object' && val !== null) {
+        results.push(...collectMatches(val, query, childPath));
+      } else {
+        const valStr = val === null ? 'null' : val === undefined ? 'undefined' : String(val);
+        if (valStr.toLowerCase().includes(lowerQ)) {
+          results.push({ path: childPath, type: 'value' });
+        }
+      }
+    });
+  }
+
+  return results;
+}
+
+export function collectAllMatches(data: any, query: string): MatchInfo[] {
+  if (!query || !data) return [];
+  const isArray = Array.isArray(data);
+  if (isArray) return collectMatches(data, query, 'root');
+  if (typeof data === 'object' && data !== null) return collectMatches(data, query, '');
+  return [];
+}
+
+export function getAncestorPaths(path: string): string[] {
+  const ancestors: string[] = [];
+  let current = path;
+  while (true) {
+    const dotIdx = current.lastIndexOf('.');
+    const bracketIdx = current.lastIndexOf('[');
+    const cutIdx = Math.max(dotIdx, bracketIdx);
+    if (cutIdx <= 0) break;
+    current = current.substring(0, cutIdx);
+    ancestors.push(current);
+  }
+  return ancestors;
+}
+
+function highlightText(text: string, query: string, isActive: boolean): React.ReactNode {
+  if (!query) return text;
+  const lowerText = text.toLowerCase();
+  const lowerQ = query.toLowerCase();
+  const idx = lowerText.indexOf(lowerQ);
+  if (idx === -1) return text;
+
+  const parts: React.ReactNode[] = [];
+  let lastIdx = 0;
+  let pos = idx;
+
+  while (pos !== -1) {
+    if (pos > lastIdx) parts.push(text.substring(lastIdx, pos));
+    parts.push(
+      <span
+        key={pos}
+        style={isActive ? devToolsStyles.searchHighlightActive : devToolsStyles.searchHighlight}
+      >
+        {text.substring(pos, pos + query.length)}
+      </span>
+    );
+    lastIdx = pos + query.length;
+    pos = lowerText.indexOf(lowerQ, lastIdx);
+  }
+  if (lastIdx < text.length) parts.push(text.substring(lastIdx));
+  return <>{parts}</>;
+}
 
 interface TreeNodeProps {
   label: string;
@@ -7,13 +105,28 @@ interface TreeNodeProps {
   level: number;
   expandedPaths: Set<string>;
   onToggle: (path: string) => void;
+  searchQuery: string;
+  activeMatch: MatchInfo | null;
+  matchPaths: Set<string>;
 }
 
-const TreeNode: React.FC<TreeNodeProps> = ({ label, value, path, level, expandedPaths, onToggle }) => {
+const TreeNode: React.FC<TreeNodeProps> = ({
+  label, value, path, level, expandedPaths, onToggle,
+  searchQuery, activeMatch, matchPaths,
+}) => {
+  const nodeRef = useRef<HTMLDivElement>(null);
   const isExpanded = expandedPaths.has(path);
-  const hasChildren = (typeof value === 'object' && value !== null && !Array.isArray(value)) || Array.isArray(value);
+  const hasChildren = (typeof value === 'object' && value !== null);
   const isObject = typeof value === 'object' && value !== null && !Array.isArray(value);
   const isArray = Array.isArray(value);
+
+  const isActiveNode = activeMatch?.path === path;
+
+  useEffect(() => {
+    if (isActiveNode && nodeRef.current) {
+      nodeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isActiveNode]);
 
   const getValueDisplay = () => {
     if (value === null) return 'null';
@@ -27,6 +140,18 @@ const TreeNode: React.FC<TreeNodeProps> = ({ label, value, path, level, expanded
     if (isArray) return `[${value.length}]`;
     if (isObject) return `{${Object.keys(value).length}}`;
     return '';
+  };
+
+  const renderLabel = () => {
+    const isKeyMatch = matchPaths.has(path) && searchQuery;
+    return highlightText(label, isKeyMatch ? searchQuery : '', isActiveNode && activeMatch?.type === 'key');
+  };
+
+  const renderValue = () => {
+    const valStr = getValueDisplay();
+    if (!searchQuery) return valStr;
+    const isValMatch = matchPaths.has(path);
+    return highlightText(valStr, isValMatch ? searchQuery : '', isActiveNode && activeMatch?.type === 'value');
   };
 
   const renderChildren = () => {
@@ -44,6 +169,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({ label, value, path, level, expanded
             level={level + 1}
             expandedPaths={expandedPaths}
             onToggle={onToggle}
+            searchQuery={searchQuery}
+            activeMatch={activeMatch}
+            matchPaths={matchPaths}
           />
         );
       });
@@ -61,6 +189,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({ label, value, path, level, expanded
             level={level + 1}
             expandedPaths={expandedPaths}
             onToggle={onToggle}
+            searchQuery={searchQuery}
+            activeMatch={activeMatch}
+            matchPaths={matchPaths}
           />
         );
       });
@@ -72,6 +203,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ label, value, path, level, expanded
   return (
     <div style={{ marginLeft: `${level * 16}px` }}>
       <div
+        ref={nodeRef}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -81,17 +213,17 @@ const TreeNode: React.FC<TreeNodeProps> = ({ label, value, path, level, expanded
           transition: 'background-color 0.15s',
           fontSize: '13px',
           lineHeight: '1.5',
+          backgroundColor: isActiveNode ? 'rgba(79, 70, 229, 0.08)' : undefined,
+          outline: isActiveNode ? '1.5px solid rgba(79, 70, 229, 0.3)' : undefined,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#f9fafb';
+          if (!isActiveNode) e.currentTarget.style.backgroundColor = '#f9fafb';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent';
+          if (!isActiveNode) e.currentTarget.style.backgroundColor = isActiveNode ? 'rgba(79, 70, 229, 0.08)' : 'transparent';
         }}
         onClick={() => {
-          if (hasChildren) {
-            onToggle(path);
-          }
+          if (hasChildren) onToggle(path);
         }}
       >
         <span
@@ -111,7 +243,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ label, value, path, level, expanded
           ▶
         </span>
         <span style={{ fontWeight: hasChildren ? '600' : '400', color: '#374151', marginRight: '6px' }}>
-          {label}:
+          {renderLabel()}:
         </span>
         {hasChildren && (
           <span style={{ color: '#9ca3af', fontSize: '12px', marginRight: '6px' }}>
@@ -120,7 +252,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ label, value, path, level, expanded
         )}
         {!hasChildren && (
           <span style={{ color: '#6b7280', fontSize: '12px' }}>
-            {getValueDisplay()}
+            {renderValue()}
           </span>
         )}
       </div>
@@ -132,26 +264,46 @@ const TreeNode: React.FC<TreeNodeProps> = ({ label, value, path, level, expanded
 interface StateTreeProps {
   data: any;
   defaultExpanded?: boolean;
+  searchQuery?: string;
+  /** Matches pre-computed externally (by CurrentStateTab for cross-store coordination) */
+  externalMatches?: MatchInfo[];
+  /** The currently active match (one of externalMatches) */
+  externalActiveMatch?: MatchInfo | null;
+  /** Legacy: when used standalone without external match management */
+  activeMatchIndex?: number;
+  onMatchCountChange?: (count: number) => void;
 }
 
-export const StateTree: React.FC<StateTreeProps> = ({ data, defaultExpanded = true }) => {
+export const StateTree: React.FC<StateTreeProps> = ({
+  data,
+  defaultExpanded = true,
+  searchQuery = '',
+  externalMatches,
+  externalActiveMatch,
+  activeMatchIndex = 0,
+  onMatchCountChange,
+}) => {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [internalMatches, setInternalMatches] = useState<MatchInfo[]>([]);
+  const matchPathsRef = useRef<Set<string>>(new Set());
 
-  React.useEffect(() => {
+  const useExternal = externalMatches !== undefined;
+  const matches = useExternal ? externalMatches : internalMatches;
+  const activeMatch = useExternal
+    ? (externalActiveMatch ?? null)
+    : (internalMatches[activeMatchIndex] ?? null);
+
+  useEffect(() => {
     if (defaultExpanded && data) {
       const paths = new Set<string>();
-      
-      // 只展开第一级（默认展开）
       if (typeof data === 'object' && data !== null) {
         if (Array.isArray(data)) {
-          // 数组：展开所有数组项（如果它们是对象）
           data.forEach((item, index) => {
             if (typeof item === 'object' && item !== null) {
               paths.add(`root[${index}]`);
             }
           });
         } else {
-          // 对象：展开所有第一级键
           Object.keys(data).forEach((key) => {
             if (typeof data[key] === 'object' && data[key] !== null) {
               paths.add(key);
@@ -159,12 +311,64 @@ export const StateTree: React.FC<StateTreeProps> = ({ data, defaultExpanded = tr
           });
         }
       }
-      
       setExpandedPaths(paths);
     }
   }, [data, defaultExpanded]);
 
-  const handleToggle = (path: string) => {
+  useEffect(() => {
+    if (useExternal) {
+      matchPathsRef.current = new Set(matches.map((m) => m.path));
+
+      if (matches.length > 0) {
+        setExpandedPaths((prev) => {
+          const next = new Set(prev);
+          matches.forEach((m) => {
+            getAncestorPaths(m.path).forEach((a) => next.add(a));
+          });
+          return next;
+        });
+      }
+      return;
+    }
+
+    if (!searchQuery || !data) {
+      setInternalMatches([]);
+      matchPathsRef.current = new Set();
+      onMatchCountChange?.(0);
+      return;
+    }
+
+    const allMatches = collectAllMatches(data, searchQuery);
+    setInternalMatches(allMatches);
+    matchPathsRef.current = new Set(allMatches.map((m) => m.path));
+    onMatchCountChange?.(allMatches.length);
+
+    if (allMatches.length > 0) {
+      setExpandedPaths((prev) => {
+        const next = new Set(prev);
+        allMatches.forEach((m) => {
+          getAncestorPaths(m.path).forEach((a) => next.add(a));
+        });
+        return next;
+      });
+    }
+  }, [searchQuery, data, useExternal, matches, onMatchCountChange]);
+
+  useEffect(() => {
+    if (!activeMatch) return;
+
+    setExpandedPaths((prev) => {
+      const ancestors = getAncestorPaths(activeMatch.path);
+      const allPresent = ancestors.every((a) => prev.has(a));
+      if (allPresent) return prev;
+
+      const next = new Set(prev);
+      ancestors.forEach((a) => next.add(a));
+      return next;
+    });
+  }, [activeMatch]);
+
+  const handleToggle = useCallback((path: string) => {
     setExpandedPaths((prev) => {
       const next = new Set(prev);
       if (next.has(path)) {
@@ -174,7 +378,7 @@ export const StateTree: React.FC<StateTreeProps> = ({ data, defaultExpanded = tr
       }
       return next;
     });
-  };
+  }, []);
 
   if (data === null || data === undefined) {
     return (
@@ -187,7 +391,6 @@ export const StateTree: React.FC<StateTreeProps> = ({ data, defaultExpanded = tr
   const isObject = typeof data === 'object' && data !== null && !Array.isArray(data);
   const isArray = Array.isArray(data);
 
-  // 如果是对象或数组，直接渲染其子节点，不显示 root
   if (isObject || isArray) {
     return (
       <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -201,6 +404,9 @@ export const StateTree: React.FC<StateTreeProps> = ({ data, defaultExpanded = tr
               level={0}
               expandedPaths={expandedPaths}
               onToggle={handleToggle}
+              searchQuery={searchQuery}
+              activeMatch={activeMatch}
+              matchPaths={matchPathsRef.current}
             />
           ))
         ) : (
@@ -213,6 +419,9 @@ export const StateTree: React.FC<StateTreeProps> = ({ data, defaultExpanded = tr
               level={0}
               expandedPaths={expandedPaths}
               onToggle={handleToggle}
+              searchQuery={searchQuery}
+              activeMatch={activeMatch}
+              matchPaths={matchPathsRef.current}
             />
           ))
         )}
@@ -220,11 +429,9 @@ export const StateTree: React.FC<StateTreeProps> = ({ data, defaultExpanded = tr
     );
   }
 
-  // 原始值直接显示
   return (
     <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', padding: '8px', color: '#6b7280', fontSize: '13px' }}>
       {typeof data === 'string' ? `"${data}"` : String(data)}
     </div>
   );
 };
-
